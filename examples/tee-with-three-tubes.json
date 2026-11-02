@@ -1,0 +1,87 @@
+{
+  "version": 1,
+  "inventory": {
+    "tube": 64,
+    "elbow": 5,
+    "tee": 6,
+    "corner3": 15,
+    "corner4": 8,
+    "cross": 2,
+    "connector5": 3,
+    "screw": 132,
+    "wrench": 2,
+    "anchor": 4
+  },
+  "parts": [
+    {
+      "id": "part-347325a5-df6b-4e53-868f-fb0c074e0f93",
+      "partId": "tee",
+      "positionMm": [
+        0,
+        54.5,
+        0
+      ],
+      "orientation": 0
+    },
+    {
+      "id": "part-96de445d-308d-491d-85da-3e3f587dd753",
+      "partId": "tube",
+      "positionMm": [
+        -200,
+        34,
+        0
+      ],
+      "orientation": 3
+    },
+    {
+      "id": "part-2be8df2b-e377-4707-86f8-4f8338912549",
+      "partId": "tube",
+      "positionMm": [
+        200,
+        34,
+        0
+      ],
+      "orientation": 3
+    },
+    {
+      "id": "part-d09dd2fa-bcea-4a09-a7d8-6067c59debee",
+      "partId": "tube",
+      "positionMm": [
+        0,
+        234,
+        0
+      ],
+      "orientation": 0
+    },
+    {
+      "id": "part-df700ef4-5081-4124-828f-7fc77cbf8303",
+      "partId": "elbow",
+      "positionMm": [
+        -379.5,
+        54.5,
+        0
+      ],
+      "orientation": 0
+    },
+    {
+      "id": "part-bba95ad3-ac19-41d2-9eec-268d40f00a70",
+      "partId": "elbow",
+      "positionMm": [
+        379.5,
+        54.5,
+        0
+      ],
+      "orientation": 3
+    },
+    {
+      "id": "part-f0d77793-1a60-484f-a756-a3be73d362f3",
+      "partId": "elbow",
+      "positionMm": [
+        20.5,
+        413.5,
+        0
+      ],
+      "orientation": 4
+    }
+  ]
+}

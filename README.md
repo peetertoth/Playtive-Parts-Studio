@@ -1,7 +1,5 @@
 # Playtive Parts Studio
 
-**Repository bootstrap:** the initial commit contains this README and the AI agent setup. Application source, examples, and the remaining documentation will be added separately. The application guide below describes the existing local implementation and applies once its source is included.
-
 A local React + Next.js web application for viewing the parts of the Playtive Kids' Climbing Frame (383000) in 3D and designing assemblies within inventory limits.
 
 - [Part inspector](http://localhost:3000/): a separate 3D view of each part type.
@@ -9,10 +7,12 @@ A local React + Next.js web application for viewing the parts of the Playtive Ki
 
 ## Getting started
 
-Recommended environment: **Node.js 22 or later** and npm. Dependencies are already installed in this working directory.
+Recommended environment: **Node.js 24** and npm. The regression tests require Node.js 22.6 or later.
 
 ```powershell
-npm install
+git clone https://github.com/peetertoth/Playtive-Parts-Studio.git
+cd Playtive-Parts-Studio
+npm ci
 npm run dev
 ```
 

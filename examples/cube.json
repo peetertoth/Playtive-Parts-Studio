@@ -1,0 +1,217 @@
+{
+  "version": 1,
+  "inventory": {
+    "tube": 64,
+    "elbow": 5,
+    "tee": 6,
+    "corner3": 15,
+    "corner4": 8,
+    "cross": 2,
+    "connector5": 3,
+    "screw": 132,
+    "wrench": 2,
+    "anchor": 4
+  },
+  "parts": [
+    {
+      "id": "corner-000",
+      "partId": "corner3",
+      "positionMm": [
+        20.5,
+        54.5,
+        20.5
+      ],
+      "orientation": 0
+    },
+    {
+      "id": "corner-001",
+      "partId": "corner3",
+      "positionMm": [
+        20.5,
+        54.5,
+        379.5
+      ],
+      "orientation": 2
+    },
+    {
+      "id": "corner-010",
+      "partId": "corner3",
+      "positionMm": [
+        20.5,
+        413.5,
+        20.5
+      ],
+      "orientation": 1
+    },
+    {
+      "id": "corner-011",
+      "partId": "corner3",
+      "positionMm": [
+        20.5,
+        413.5,
+        379.5
+      ],
+      "orientation": 4
+    },
+    {
+      "id": "corner-100",
+      "partId": "corner3",
+      "positionMm": [
+        379.5,
+        54.5,
+        20.5
+      ],
+      "orientation": 3
+    },
+    {
+      "id": "corner-101",
+      "partId": "corner3",
+      "positionMm": [
+        379.5,
+        54.5,
+        379.5
+      ],
+      "orientation": 7
+    },
+    {
+      "id": "corner-110",
+      "partId": "corner3",
+      "positionMm": [
+        379.5,
+        413.5,
+        20.5
+      ],
+      "orientation": 9
+    },
+    {
+      "id": "corner-111",
+      "partId": "corner3",
+      "positionMm": [
+        379.5,
+        413.5,
+        379.5
+      ],
+      "orientation": 12
+    },
+    {
+      "id": "tube-0",
+      "partId": "tube",
+      "positionMm": [
+        0,
+        34,
+        200
+      ],
+      "orientation": 1
+    },
+    {
+      "id": "tube-1",
+      "partId": "tube",
+      "positionMm": [
+        0,
+        234,
+        0
+      ],
+      "orientation": 0
+    },
+    {
+      "id": "tube-2",
+      "partId": "tube",
+      "positionMm": [
+        200,
+        34,
+        0
+      ],
+      "orientation": 5
+    },
+    {
+      "id": "tube-3",
+      "partId": "tube",
+      "positionMm": [
+        0,
+        234,
+        400
+      ],
+      "orientation": 0
+    },
+    {
+      "id": "tube-4",
+      "partId": "tube",
+      "positionMm": [
+        200,
+        34,
+        400
+      ],
+      "orientation": 5
+    },
+    {
+      "id": "tube-5",
+      "partId": "tube",
+      "positionMm": [
+        0,
+        434,
+        200
+      ],
+      "orientation": 1
+    },
+    {
+      "id": "tube-6",
+      "partId": "tube",
+      "positionMm": [
+        200,
+        434,
+        0
+      ],
+      "orientation": 5
+    },
+    {
+      "id": "tube-7",
+      "partId": "tube",
+      "positionMm": [
+        200,
+        434,
+        400
+      ],
+      "orientation": 5
+    },
+    {
+      "id": "tube-8",
+      "partId": "tube",
+      "positionMm": [
+        400,
+        34,
+        200
+      ],
+      "orientation": 1
+    },
+    {
+      "id": "tube-9",
+      "partId": "tube",
+      "positionMm": [
+        400,
+        234,
+        0
+      ],
+      "orientation": 0
+    },
+    {
+      "id": "tube-10",
+      "partId": "tube",
+      "positionMm": [
+        400,
+        234,
+        400
+      ],
+      "orientation": 0
+    },
+    {
+      "id": "tube-11",
+      "partId": "tube",
+      "positionMm": [
+        400,
+        434,
+        200
+      ],
+      "orientation": 1
+    }
+  ]
+}
