@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
-    "test:planner": "node --experimental-strip-types --test tests/assembly-engine.test.mjs",
+    "test:planner": "node --experimental-strip-types --test tests/assembly-engine.test.mjs tests/instance-id.test.mjs",
     "test:i18n": "node --experimental-strip-types --test tests/i18n.test.mjs"
   },
   "dependencies": {

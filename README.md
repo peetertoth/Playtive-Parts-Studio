@@ -24,6 +24,10 @@ On this machine, you can also run `start-local.ps1` from the project directory t
 powershell -ExecutionPolicy Bypass -File .\start-local.ps1
 ```
 
+The launcher listens on `0.0.0.0` by default, so other devices on the same network can open `http://<computer-ip>:3000` (or `/planner`). Use the computer's actual IPv4 address in the browser. Next.js development assets allow the machine's assigned IPv4 addresses, detected when the server starts. Restart the server if its network address changes. To bind only to loopback, pass `-BindAddress 127.0.0.1`.
+
+The planner supports ordinary HTTP access by IP, including part creation when the browser does not expose `crypto.randomUUID()`. Local saves and the language preference belong to each browser origin: `localhost` and an IP address have separate storage. Export a plan as JSON and import it at the other address to transfer it.
+
 ## Features
 
 - Select a part type from a searchable library with category filters.
@@ -100,6 +104,7 @@ src/i18n/                        # Typed dictionaries, locale context, and langu
 src/lib/assembly-engine.ts       # Browser-independent snapping engine
 src/components/planner/          # Planner interface and 3D editor
 tests/assembly-engine.test.mjs   # Domain regression tests
+tests/instance-id.test.mjs       # HTTP LAN part creation and saved-ID compatibility
 tests/i18n.test.mjs              # Locale and translation regression tests
 ```
 

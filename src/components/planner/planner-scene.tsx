@@ -8,6 +8,7 @@ import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import { MM_PER_SCENE_UNIT, type Vec3 } from "@/domain/parts";
 import type { PlacedPart, PlacementResult, PlannerDraft, PlannerSceneProps, WorldPort } from "@/domain/planner";
 import { evaluatePlacement, getPartDefinition, groundedPosition } from "@/lib/assembly-engine";
+import { createPartInstanceId } from "@/lib/instance-id";
 import { PartModel } from "@/components/3d/part-model";
 import { centerCamera, framingDistance } from "@/components/3d/part-framing";
 import { assemblyFrame, availableConnectionPorts, orientationQuaternion, pointerPortTarget, scenePosition } from "./scene-math";
@@ -202,7 +203,7 @@ function Scene(props: PlannerSceneProps & { report: (result: PlacementResult | n
     if (!currentDraft || !inside(point)) { publish(null); return null; }
     let identity = candidateIdentity.current;
     if (!identity || identity.partId !== currentDraft.partId || identity.movingId !== currentDraft.movingId) {
-      identity = { partId: currentDraft.partId, movingId: currentDraft.movingId, id: currentDraft.movingId ?? `part-${crypto.randomUUID()}` };
+      identity = { partId: currentDraft.partId, movingId: currentDraft.movingId, id: currentDraft.movingId ?? createPartInstanceId() };
       candidateIdentity.current = identity;
     }
     camera.updateMatrixWorld();

@@ -1,4 +1,7 @@
-param([int]$Port = 3000)
+param(
+    [int]$Port = 3000,
+    [ValidateNotNullOrEmpty()][string]$BindAddress = '0.0.0.0'
+)
 
 $ErrorActionPreference = 'Stop'
 $bundledNode = Join-Path $env:USERPROFILE '.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node.exe'
@@ -15,7 +18,7 @@ if (-not (Test-Path -LiteralPath $bundledNode)) {
 
 Push-Location -LiteralPath $projectRoot
 try {
-    & $bundledNode $nextCli dev --hostname 127.0.0.1 --port $Port
+    & $bundledNode $nextCli dev --hostname $BindAddress --port $Port
     exit $LASTEXITCODE
 } finally {
     Pop-Location

@@ -1,5 +1,14 @@
 # Verification — 2026-11-02
 
+## HTTP LAN access — 2026-11-03
+
+- The PowerShell launcher now binds to `0.0.0.0` by default, with an optional `-BindAddress` override. A running launcher was observed listening on `0.0.0.0:3000`; PowerShell syntax validation passed.
+- Development origins use the machine's assigned IPv4 addresses instead of a wildcard. The actual Next.js development asset/WebSocket origin guard accepted the assigned addresses and localhost and rejected an unrelated origin in a direct function check.
+- Both planner UI and Scene use the shared UUIDv4 helper. It retains native `crypto.randomUUID()` on secure origins and uses `crypto.getRandomValues()` on ordinary HTTP LAN origins. Moves preserve their existing IDs.
+- All 33 domain/i18n/ID tests and the production build passed. Three focused ID tests cover native generation, 1,000 distinct fallback IDs, and multiple additions/move/JSON round trips.
+- Actual UI and Scene handler harnesses passed with `randomUUID` absent: distinct additions, stable repeated moves, six consecutive spatial attachments, history/storage/rotation, and 14 locale round trips. Each harness restored the original global crypto descriptor.
+- Browser access remained unavailable; no HTTP/browser workaround was used. A different device's network/firewall reachability and rendered interaction were not directly verified. Local storage remains isolated by origin, so plans can be transferred between localhost and an IP address through JSON export/import.
+
 The latest entry records the integrated language-support checks. Earlier entries retain their original verification scope and limitations.
 
 ## Hungarian and English internationalization

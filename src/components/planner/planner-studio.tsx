@@ -17,6 +17,7 @@ import {
   remainingInventory, removePlacedPart, rotateOrientation, rotatePlacedPart,
   validateDocument,
 } from "@/lib/assembly-engine";
+import { createPartInstanceId } from "@/lib/instance-id";
 import { PartGlyph } from "@/components/catalog/part-glyph";
 import type { Locale } from "@/i18n/config";
 import { useI18n } from "@/i18n/provider";
@@ -221,7 +222,7 @@ export function PlannerStudio() {
       resetInteraction();
       return;
     }
-    const candidate = { ...part, id: movingId ?? `part-${crypto.randomUUID()}` };
+    const candidate = { ...part, id: movingId ?? createPartInstanceId() };
     const committed = commitPlacement(current, candidate, { magnetic: true, autoOrient: false });
     if (!committed.result.valid) {
       setPreview(committed.result);
