@@ -10,6 +10,7 @@ import { viewerMessages } from "../src/i18n/viewer-messages.ts";
 import { plannerMessages } from "../src/i18n/planner-messages.ts";
 import { sceneMessages } from "../src/i18n/scene-messages.ts";
 import { siteMessages } from "../src/i18n/site-messages.ts";
+import { generatorMessages } from "../src/i18n/generator-messages.ts";
 import { makeEmptyDocument, evaluatePlacement, validateDocument } from "../src/lib/assembly-engine.ts";
 
 test("locale selection uses Hungarian by default and persists only supported choices", () => {
@@ -33,7 +34,7 @@ function assertShape(hu, en, prefix = "") {
 }
 
 test("every UI namespace has matching, nonempty Hungarian and English entries", () => {
-  for (const [name, dictionary] of Object.entries({ catalogMessages, viewerMessages, plannerMessages, sceneMessages, siteMessages, categoryLabels, plannerErrorMessages })) {
+  for (const [name, dictionary] of Object.entries({ catalogMessages, viewerMessages, plannerMessages, sceneMessages, siteMessages, generatorMessages, categoryLabels, plannerErrorMessages })) {
     assertShape(dictionary.hu, dictionary.en, name);
   }
   assert.equal(catalogMessages.en.partTypes(1), "part type");

@@ -6,12 +6,14 @@ import {
   ArrowUpRight, Box, Boxes, Check, CircleHelp,
   Download, Expand, Grid2X2, Grip, HardDrive, Info, Layers3, LoaderCircle,
   Magnet, Maximize2, Minus, MousePointer2, Move3D, Plus, Redo2, RotateCcw,
-  RotateCw, Settings2, Target, Trash2, Undo2, Upload, X,
+  RotateCw, Settings2, Shuffle, Target, Trash2, Undo2, Upload, X,
 } from "lucide-react";
 import { PARTS } from "@/domain/catalog";
 import type { PartKind } from "@/domain/parts";
 import { PLANNER_STORAGE_KEY, type Axis, type Inventory, type PlacedPart, type PlacementResult, type PlannerDocument, type PlannerDraft } from "@/domain/planner";
 import { ROTATION_AXES } from "@/domain/rotation-controls";
+import type { GenerationOptions, GenerationStats } from "@/domain/generator";
+import { checkGeneratedDocument } from "@/lib/assembly-analysis";
 import {
   commitPlacement, deriveConnections, inventoryUsage, makeEmptyDocument,
   remainingInventory, removePlacedPart, rotateOrientation, rotatePlacedPart,
@@ -19,11 +21,13 @@ import {
 } from "@/lib/assembly-engine";
 import { createPartInstanceId } from "@/lib/instance-id";
 import { PartGlyph } from "@/components/catalog/part-glyph";
-import type { Locale } from "@/i18n/config";
+import { formatLocaleNumber, type Locale } from "@/i18n/config";
 import { useI18n } from "@/i18n/provider";
 import { LanguageSwitcher } from "@/i18n/language-switcher";
 import { plannerErrorMessage } from "@/i18n/planner-errors";
 import { plannerMessages } from "@/i18n/planner-messages";
+import { generatorMessages } from "@/i18n/generator-messages";
+import { GeneratorDialog } from "./generator-dialog";
 
 function PlannerLoading() {
   const { locale } = useI18n();
@@ -78,6 +82,7 @@ export function PlannerStudio() {
   const draftRef = useRef<PlannerDraft | null>(null);
   const [preview, setPreview] = useState<PlacementResult | null>(null);
   const [notice, setNotice] = useState<Notice>(null);
+  const [generatorOpen, setGeneratorOpen] = useState(false);
   const [placementHeightMm, setPlacementHeightMm] = useState(0);
   const [showPorts, setShowPorts] = useState(true);
   const [view, setView] = useState<"isometric" | "top" | "front">("isometric");
@@ -114,6 +119,32 @@ export function PlannerStudio() {
     if (message) setNotice({ tone: "info", message });
     return true;
   }, []);
+
+  const applyGeneratedDocument = useCallback((candidate: PlannerDocument, options: GenerationOptions, baseSnapshot: PlannerDocument, stats: GenerationStats) => {
+    if (historyRef.current.present !== baseSnapshot) {
+      setNotice({ tone: "error", message: (locale) => generatorMessages[locale].staleNotice });
+      return false;
+    }
+    try {
+      if (!checkGeneratedDocument(baseSnapshot, candidate, options)) {
+        setNotice({ tone: "error", message: (locale) => generatorMessages[locale].invalidResultNotice });
+        return false;
+      }
+    } catch {
+      setNotice({ tone: "error", message: (locale) => generatorMessages[locale].invalidResultNotice });
+      return false;
+    }
+    const changed = applyDocument(candidate, (locale) => {
+      const format = (value: number) => formatLocaleNumber(value, locale);
+      return generatorMessages[locale].successNotice(format(stats.usedParts), format(stats.remainingParts),
+        format(stats.bounds.widthMm), format(stats.bounds.heightMm), format(stats.bounds.depthMm));
+    });
+    if (!changed) return false;
+    setSelectedId(null);
+    resetInteraction();
+    setFrameRequest((value) => value + 1);
+    return true;
+  }, [applyDocument, resetInteraction]);
 
   useEffect(() => {
     if (hydrated.current) return;
@@ -197,7 +228,7 @@ export function PlannerStudio() {
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
-      if (isEditing(event.target) || inventoryDialog.current?.open || helpDialog.current?.open) return;
+      if (isEditing(event.target) || inventoryDialog.current?.open || helpDialog.current?.open || generatorOpen) return;
       const key = event.key.toLowerCase();
       if ((event.ctrlKey || event.metaKey) && !event.altKey) {
         if (key === "z") { event.preventDefault(); if (event.shiftKey) redo(); else undo(); }
@@ -212,7 +243,7 @@ export function PlannerStudio() {
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [undo, redo, resetInteraction, selectedId, deleteSelected, draft, rotate]);
+  }, [undo, redo, resetInteraction, selectedId, deleteSelected, draft, rotate, generatorOpen]);
 
   const handleCommit = useCallback((part: PlacedPart) => {
     const current = historyRef.current.present;
@@ -352,7 +383,7 @@ export function PlannerStudio() {
       <main className="pl-main">
         <section className="pl-intro" aria-labelledby="planner-title"><div><div className="eyebrow"><span className="eyebrow-line" /> {t.product} <span className="eyebrow-separator">/</span> 383000</div><h1 id="planner-title">{t.headline}<span>.</span></h1><p>{t.intro}</p></div><div className="pl-intro-badges"><span><Magnet size={15} /> {t.magnetic}</span><span><RotateCw size={15} /> {t.quarterTurns}</span></div></section>
 
-        <div className="pl-actionbar" aria-label={t.planActions}><div className="pl-action-group"><button onClick={undo} aria-label={t.undoAria} disabled={!history.past.length} title={t.undoTitle}><Undo2 size={17} /><span>{t.undo}</span></button><button onClick={redo} aria-label={t.redoAria} disabled={!history.future.length} title={t.redoTitle}><Redo2 size={17} /><span>{t.redo}</span></button><span className="pl-separator" /><button onClick={() => { applyDocument({ ...historyRef.current.present, parts: [] }, (locale) => plannerMessages[locale].clearedNotice); setSelectedId(null); resetInteraction(); }} aria-label={t.clearAria} disabled={!document.parts.length}><Trash2 size={16} /><span>{t.clear}</span></button></div><div className="pl-action-group pl-file-actions"><span className={`pl-save-state ${saveBlocked || saveFailed ? "is-warning" : ""}`} role="status"><HardDrive size={13} /><span>{!storageReady ? t.loadingSave : saveBlocked ? t.savingPaused : saveFailed ? t.savingFailed : t.saved}</span></span><button onClick={() => importInput.current?.click()} aria-label={t.importAria}><Upload size={16} /><span>{t.import}</span></button><button onClick={exportDocument} className="pl-primary" aria-label={t.exportAria}><Download size={16} /><span>{t.export}</span></button><input className="sr-only" ref={importInput} type="file" accept=".json,application/json" onChange={importDocument} aria-label={t.chooseFile} /></div></div>
+        <div className="pl-actionbar" aria-label={t.planActions}><div className="pl-action-group"><button onClick={undo} aria-label={t.undoAria} disabled={!history.past.length} title={t.undoTitle}><Undo2 size={17} /><span>{t.undo}</span></button><button onClick={redo} aria-label={t.redoAria} disabled={!history.future.length} title={t.redoTitle}><Redo2 size={17} /><span>{t.redo}</span></button><span className="pl-separator" /><button onClick={() => setGeneratorOpen(true)} disabled={!storageReady} aria-label={generatorMessages[locale].toolbarAria} title={generatorMessages[locale].toolbar}><Shuffle size={17} /><span>{generatorMessages[locale].toolbar}</span></button><button onClick={() => { applyDocument({ ...historyRef.current.present, parts: [] }, (locale) => plannerMessages[locale].clearedNotice); setSelectedId(null); resetInteraction(); }} aria-label={t.clearAria} disabled={!document.parts.length}><Trash2 size={16} /><span>{t.clear}</span></button></div><div className="pl-action-group pl-file-actions"><span className={`pl-save-state ${saveBlocked || saveFailed ? "is-warning" : ""}`} role="status"><HardDrive size={13} /><span>{!storageReady ? t.loadingSave : saveBlocked ? t.savingPaused : saveFailed ? t.savingFailed : t.saved}</span></span><button onClick={() => importInput.current?.click()} aria-label={t.importAria}><Upload size={16} /><span>{t.import}</span></button><button onClick={exportDocument} className="pl-primary" aria-label={t.exportAria}><Download size={16} /><span>{t.export}</span></button><input className="sr-only" ref={importInput} type="file" accept=".json,application/json" onChange={importDocument} aria-label={t.chooseFile} /></div></div>
 
         {notice && <div className={`pl-notice ${notice.tone === "error" ? "is-error" : ""}`} role={notice.tone === "error" ? "alert" : "status"}><Info size={16} /><span>{notice.message(locale)}</span><button onClick={() => setNotice(null)} aria-label={t.closeNotice}><X size={16} /></button></div>}
         {saveBlocked && <div className="pl-recovery"><span>{t.recoveryHint}</span>{recovery !== null && <button onClick={() => downloadText(recovery, t.recoveryFilename)}>{t.downloadRecovery}</button>}<button onClick={() => { setSaveBlocked(false); setRecovery(null); setNotice({ tone: "info", message: (locale) => plannerMessages[locale].saveEnabledNotice }); }}>{t.enableSaving}</button></div>}
@@ -360,7 +391,7 @@ export function PlannerStudio() {
         <div className="pl-workspace" id="planner-workspace">
           <aside className="pl-palette" aria-label={t.paletteAria}><div className="pl-panel-heading"><div><span className="pl-kicker">{t.buildingParts}</span><h2>{t.yourStock}</h2></div><button className="pl-icon-button" onClick={openInventory} aria-label={t.editStockAria} title={t.editStock}><Settings2 size={17} /></button></div><div className="pl-palette-caption"><span>{t.dragToWorkspace}</span><span>{t.stockCaption}</span></div><div className="pl-part-list">{STRUCTURAL_PARTS.map(localizePart).map((part) => <button key={part.id} type="button" className={`pl-part-card ${draft?.partId === part.id && !draft.movingId ? "is-active" : ""}`} disabled={remaining[part.kind] <= 0} aria-pressed={draft?.partId === part.id && !draft.movingId} aria-label={t.palettePart(part.name, number(remaining[part.kind]), number(document.inventory[part.kind]))} onPointerDown={(event) => { if (event.button !== 0) return; event.preventDefault(); event.currentTarget.focus(); armPart(part.id, { x: event.clientX, y: event.clientY }); }} onClick={(event) => { if (event.detail === 0) armPart(part.id); }}><span className="pl-part-image"><PartGlyph kind={part.kind} color={part.color} /></span><span className="pl-part-copy"><span className="pl-part-code">{part.code}<i style={{ backgroundColor: part.color }} /></span><strong>{part.name}</strong><span className="pl-stock"><b>{number(remaining[part.kind])}</b> / {number(document.inventory[part.kind])} {t.pieces}{remaining[part.kind] <= 0 && <em>{t.exhausted}</em>}</span></span><Grip size={12} className="pl-grip" /></button>)}</div><div className="pl-supplies"><div><span>{t.screw}</span><strong>{number(remaining.screw)}<small> / {number(document.inventory.screw)}</small></strong></div><p>{t.suppliesNote}</p><button onClick={openInventory}>{t.manualInventory} <Settings2 size={13} /></button></div></aside>
 
-          <section className="pl-viewport" aria-label={t.viewportAria}><div className="pl-scene-fill"><PlannerScene document={document} selectedId={selectedId} draft={draft} placementHeightMm={placementHeightMm} showPorts={showPorts} frameRequest={frameRequest} view={view} viewRequest={viewRequest} onSelect={setSelectedId} onMoveStart={handleMoveStart} onRotate={rotate} onPreview={handlePreview} onCommit={handleCommit} onCancel={resetInteraction} /></div><div className="pl-view-heading"><span><i /> {t.viewportTitle}</span><span className="pl-view-count">{t.partCount(number(document.parts.length))} <i /> {t.connectionCount(number(usage.screw))}</span></div>{!document.parts.length && !draft && <div className="pl-empty-intro"><span className="pl-empty-mark"><Boxes size={33} strokeWidth={1.3} /></span><span className="pl-kicker">{t.emptyKicker}</span><h2>{t.emptyTitle}<span>.</span></h2><p>{t.emptyIntro}</p><div><span><MousePointer2 size={13} /> {t.dragOrClick}</span><span><Magnet size={13} /> {t.snapToPorts}</span></div></div>}<div className={`pl-live-status ${preview && !preview.valid && draft ? "is-invalid" : preview?.snap && draft ? "is-snapped" : ""}`} role="status" aria-live="polite" aria-atomic="true"><span className="pl-live-icon">{draft ? preview && !preview.valid ? <X size={16} /> : preview?.snap ? <Magnet size={16} /> : <Move3D size={16} /> : <MousePointer2 size={16} />}</span><span>{statusText}</span>{draft && <button onClick={resetInteraction} aria-label={t.cancelPlacement}><X size={16} /><span>Esc</span></button>}</div><div className="pl-viewport-bottom"><span><MousePointer2 size={12} /> {t.cameraHint}</span><span>mm</span></div></section>
+          <section className="pl-viewport" aria-label={t.viewportAria}><div className="pl-scene-fill"><PlannerScene document={document} selectedId={selectedId} draft={generatorOpen ? null : draft} placementHeightMm={placementHeightMm} showPorts={showPorts} frameRequest={frameRequest} view={view} viewRequest={viewRequest} onSelect={setSelectedId} onMoveStart={handleMoveStart} onRotate={rotate} onPreview={handlePreview} onCommit={handleCommit} onCancel={resetInteraction} /></div><div className="pl-view-heading"><span><i /> {t.viewportTitle}</span><span className="pl-view-count">{t.partCount(number(document.parts.length))} <i /> {t.connectionCount(number(usage.screw))}</span></div>{!document.parts.length && !draft && <div className="pl-empty-intro"><span className="pl-empty-mark"><Boxes size={33} strokeWidth={1.3} /></span><span className="pl-kicker">{t.emptyKicker}</span><h2>{t.emptyTitle}<span>.</span></h2><p>{t.emptyIntro}</p><div><span><MousePointer2 size={13} /> {t.dragOrClick}</span><span><Magnet size={13} /> {t.snapToPorts}</span></div></div>}<div className={`pl-live-status ${preview && !preview.valid && draft ? "is-invalid" : preview?.snap && draft ? "is-snapped" : ""}`} role="status" aria-live="polite" aria-atomic="true"><span className="pl-live-icon">{draft ? preview && !preview.valid ? <X size={16} /> : preview?.snap ? <Magnet size={16} /> : <Move3D size={16} /> : <MousePointer2 size={16} />}</span><span>{statusText}</span>{draft && <button onClick={resetInteraction} aria-label={t.cancelPlacement}><X size={16} /><span>Esc</span></button>}</div><div className="pl-viewport-bottom"><span><MousePointer2 size={12} /> {t.cameraHint}</span><span>mm</span></div></section>
 
           <aside className="pl-properties" aria-label={t.propertiesAria}><div className="pl-property-heading"><span className="pl-kicker">{draft ? draft.movingId ? t.moving : t.placing : selected ? t.selectedPart : t.yourWorkshop}</span><Move3D size={15} /></div>{activeDefinition ? <div className="pl-active-part"><span className="pl-active-swatch" style={{ backgroundColor: activeDefinition.color }} /><span className="pl-part-code">{activeDefinition.code} · {activeDefinition.colorName}</span><h2>{activeDefinition.name}</h2><p>{draft ? t.draftHint : t.selectedHint}</p></div> : <div className="pl-selection-placeholder"><span><Move3D size={27} strokeWidth={1.3} /></span><h2>{t.selectionTitle}</h2><p>{t.selectionHint}</p></div>}
 
@@ -387,6 +418,8 @@ export function PlannerStudio() {
         </div>
         <footer className="pl-footer"><p><Info size={14} /><span>{t.disclaimer} <button onClick={openInventory}>{t.stockSource} <ArrowUpRight size={11} /></button></span></p><span>{t.localWorkspace} <i /> {t.planVersion}</span></footer>
       </main>
+
+      {generatorOpen && <GeneratorDialog document={document} onClose={() => setGeneratorOpen(false)} onApply={applyGeneratedDocument} />}
 
       <dialog className="pl-dialog pl-inventory-dialog" ref={inventoryDialog} aria-labelledby="inventory-title" onClick={(event) => { if (event.target === event.currentTarget) inventoryDialog.current?.close(); }}><form noValidate onSubmit={saveInventory}><div className="pl-dialog-top"><span className="pl-kicker">{t.manualStockKicker}</span><button type="button" className="pl-icon-button" onClick={() => inventoryDialog.current?.close()} aria-label={t.closeInventory}><X size={19} /></button></div><h2 id="inventory-title">{t.inventoryTitle}</h2><p>{t.inventoryIntro}</p><div className="pl-inventory-table"><div className="pl-inventory-table-heading"><span>{t.part}</span><span>{t.used}</span><span>{t.stockTotal}</span></div>{PARTS.map(localizePart).map((part) => <div className="pl-inventory-row" key={part.id}><label htmlFor={`stock-${part.kind}`}><i style={{ backgroundColor: part.color }} /><span>{part.name}{part.category === "accessory" && <small>{part.kind === "screw" ? t.forConnections : t.supply}</small>}</span></label><span>{number(usage[part.kind])} {t.pieces}</span><input id={`stock-${part.kind}`} type="number" inputMode="numeric" min={usage[part.kind]} step={1} required value={inventoryEdit[part.kind]} onChange={(event) => { setInventoryEdit((current) => ({ ...current, [part.kind]: event.target.value })); setInventoryError(null); }} aria-label={t.inventoryTotal(part.name)} /></div>)}</div>{inventoryError && <div className="pl-form-error" role="alert"><Info size={15} />{inventoryErrorText}</div>}<div className="pl-inventory-source"><Info size={15} /><p>{t.inventorySource}. {t.sourceCaveat} <a href={MANUAL_URL} target="_blank" rel="noreferrer">{t.relatedManual} <ArrowUpRight size={11} /></a></p></div><div className="pl-dialog-actions"><button type="button" onClick={() => inventoryDialog.current?.close()}>{t.cancel}</button><button className="pl-primary" type="submit"><Check size={16} /> {t.applyInventory}</button></div></form></dialog>
 

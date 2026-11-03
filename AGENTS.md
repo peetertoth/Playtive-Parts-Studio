@@ -44,6 +44,7 @@ The primary agent is the orchestrator and remains the user's point of contact. I
 - `npm run typecheck` — Next route types + TypeScript check.
 - `npm run test:planner` — pure assembly engine regression tests; Node 22.6+ required, bundled Node24 preferred on this machine.
 - `npm run test:i18n` — translation coverage, locale preferences, and localized domain validation.
+- `npm run test:generator` — closed assembly search, independent geometry/stock audit and worker protocol.
 - `npm run build` — production build.
 
 Custom project agents live in `.codex/agents/`. See `docs/agents/README.md` for orchestration and handoff instructions. Leave model selection inherited from the primary agent unless the user explicitly chooses otherwise.

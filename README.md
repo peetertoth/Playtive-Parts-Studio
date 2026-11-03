@@ -44,6 +44,7 @@ The assembly planner provides:
 - Inventory and screw usage tracking, with editable reference quantities from the manual.
 - Select, move individually, and delete existing parts; undo and redo.
 - Adjustable placement-plane height and isometric/front/top camera views.
+- Random closed assembly generation with optional width, height and depth limits, or continuation of the current plan.
 - Automatic local saving, validated JSON import, and JSON export. Invalid saved data or imports do not overwrite preserved work.
 
 Moving a part leaves its neighbors in place and recalculates connections. A part with occupied ports may rotate only if the neighboring endpoints are preserved. The wrench and ground anchor are inventory supplies and cannot be placed in the structural workspace.
@@ -54,6 +55,14 @@ The sample [examples/tee-with-three-tubes.json](examples/tee-with-three-tubes.js
 
 There is no backend, database, or sign-in. Plans are saved in the browser's local storage; download a JSON file for a lasting backup.
 
+## Random assembly generation
+
+Choose **Random assembly** in the planner toolbar. Select **New assembly** to replace the current shape or **Continue existing** to keep every existing part in place. Optionally enter maximum width (X), height (Y) and depth (Z) in millimeters; each blank field is uncapped. The limits include the complete outer model, including connector bodies.
+
+Generation looks for a single connected assembly using as many structural parts as it can find. Every tube end and every connector socket must be occupied. Inventory, screws, collisions and ground clearance are checked before application. Search runs in the background and can be cancelled. Failed or cancelled runs preserve the current plan, and a successful result can be undone in one step.
+
+The search is bounded and another run may find a different or larger result. Some inventory may remain unused. A completely closed existing shape cannot accept more connected parts while all existing pieces remain fixed; select **New assembly** for another variant. Search design and continuation limits: [docs/generator-design.md](docs/generator-design.md).
+
 ## Language support
 
 Hungarian is the default UI language, regardless of the browser's language. The visible HU/EN switcher selects Hungarian or English, and the `playtive-locale` cookie preserves that choice for one year across the inspector and planner routes. UI text comes from typed, project-local dictionaries and a shared locale context in `src/i18n/`; no additional i18n library is required. Numbers and other locale-sensitive values use `Intl` with the selected locale.
@@ -62,7 +71,7 @@ The server reads the cookie for localized page metadata and the root HTML langua
 
 Keep code identifiers, comments, documentation, developer messages, and agent instructions in English. Put user-facing text in the central dictionaries and provide both Hungarian and English translations. Keep saved-plan JSON, part identifiers, and domain schemas independent of the selected UI language.
 
-The dictionaries are grouped by inspector, viewer, planner, scene, site metadata and validation errors. Add both translations when adding a message and run `npm run test:i18n`. Store transient notices as locale-neutral data or message functions so a language change also translates messages already on screen. Switching languages preserves the active plan, draft, selection and undo history.
+The dictionaries are grouped by inspector, viewer, planner, generation, scene, site metadata and validation errors. Add both translations when adding a message and run `npm run test:i18n`. Store transient notices as locale-neutral data or message functions so a language change also translates messages already on screen. Switching languages preserves the active plan, draft, selection and undo history.
 
 ## Models and accuracy
 
@@ -105,6 +114,7 @@ src/lib/assembly-engine.ts       # Browser-independent snapping engine
 src/components/planner/          # Planner interface and 3D editor
 tests/assembly-engine.test.mjs   # Domain regression tests
 tests/instance-id.test.mjs       # HTTP LAN part creation and saved-ID compatibility
+tests/assembly-generator.test.mjs # Closed assembly search and continuation
 tests/i18n.test.mjs              # Locale and translation regression tests
 ```
 
@@ -114,6 +124,7 @@ tests/i18n.test.mjs              # Locale and translation regression tests
 npm run typecheck
 npm run test:planner
 npm run test:i18n
+npm run test:generator
 npm run build
 ```
 

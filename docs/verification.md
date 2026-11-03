@@ -1,4 +1,16 @@
-# Verification — 2026-11-02
+# Verification
+
+## Closed assembly generation — 2026-11-03
+
+- All 59 automated tests passed: the original assembly/i18n/HTTP ID tests, 11 independent geometry audit tests, 13 search tests and 2 actual worker-thread protocol tests. The production build and its TypeScript check passed. Build output includes the compiled generator worker and Turbopack worker bootstrap.
+- Output checks require every real tube end and connector socket to be occupied, a single connected nonempty assembly, stock and screw compliance, collision/floor validity, inclusive outer-size caps and unchanged inventory. Tests include every connector kind, five-way sockets, both tube ends, disconnected closed shapes, tight independent caps, malformed input and failed searches with no partial document.
+- Deterministic variants include results using all 103 available structural pieces. New runs produce different geometry; generation is a bounded lattice search and does not guarantee a global optimum or exhaustive feasibility detection.
+- Continuation tests preserve every original ID, type, position and orientation, including partial cubes and individual tubes. Compact completion seeds closed all 144 connector-kind/orientation combinations at an elevated hub within 64 attempts, plus all tested floor-feasible connector orientations. The geometry specialist independently reran all 144 cases, checked actual closure/stock/stats and verified immutable inputs. The shared 1e-6 mm limit tolerance is covered by a regression.
+- The actual worker module was executed in a separate Node worker thread, using a browser-message adapter. It returned a closed bounded result, preserved the request data and reported impossible caps or malformed protocol without a partial plan.
+- An actual-source Studio hook harness verified one history/save step per successful apply, exact undo/redo, independent audit, continuation, stale snapshot refusal, and rejection of open-port, bounds and stock violations without document/history/save changes. Modal open/close preserved placement and selection; shortcuts were isolated.
+- An actual-source dialog harness passed 24 lifecycle/settings cases with mock workers and real generated documents: optional/invalid/native-invalid caps, fresh seeds, cancellation/closure/unmount cleanup, ignored late or duplicate messages, worker constructor/post/message/error failures, no-solution and stale refusals, structural-only metrics and live HU/EN state text. Existing UI, locale and HTTP-ID fallback checks continued to pass.
+
+These checks exercise real domain functions, thread protocol and component callbacks with simulated React/native dialog/worker surfaces. Browser access remained unavailable, so live browser rendering, device-level modal/focus behavior and visual WebGL interaction were not verified.
 
 ## HTTP LAN access — 2026-11-03
 
@@ -9,7 +21,7 @@
 - Actual UI and Scene handler harnesses passed with `randomUUID` absent: distinct additions, stable repeated moves, six consecutive spatial attachments, history/storage/rotation, and 14 locale round trips. Each harness restored the original global crypto descriptor.
 - Browser access remained unavailable; no HTTP/browser workaround was used. A different device's network/firewall reachability and rendered interaction were not directly verified. Local storage remains isolated by origin, so plans can be transferred between localhost and an IP address through JSON export/import.
 
-The latest entry records the integrated language-support checks. Earlier entries retain their original verification scope and limitations.
+Earlier entries retain their original verification scope and limitations.
 
 ## Hungarian and English internationalization
 

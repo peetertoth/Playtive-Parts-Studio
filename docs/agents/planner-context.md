@@ -32,6 +32,10 @@ Shared types: `src/domain/parts.ts`, `src/domain/planner.ts` (orchestrator-owned
 
 Engine code uses explicit relative `.ts` import extensions so Node24 can execute tests with built-in type stripping. Orchestrator enables TS allowImportingTsExtensions. No new dependency is needed.
 
+## Closed assembly generator
+
+Read `../generator-design.md` for generation work. Shared contracts are in `src/domain/generator.ts`; the pure search is `src/lib/assembly-generator.ts`, independent physical/closure audit is `src/lib/assembly-analysis.ts`, and the browser worker is `src/workers/assembly-generator.worker.ts`. Generation supports new or immutable continuation, three independent optional outer-size caps in millimeters, seeded variants and bounded effort. Every accepted result must be nonempty, one connected assembly, stock/collision/floor valid, and have zero unoccupied tube ends AND connector sockets. Do not substitute fake caps or emit partial completion. The worker does not write editor state; its result is audited again before one undoable apply. Preserve snapshot rejection, worker cancellation, HU/EN text and ordinary HTTP LAN support. A failed or cancelled search preserves current work.
+
 ## Ownership and UI contract
 
 - Assembly engine agent owns the engine and its meaningful Node regression tests.
