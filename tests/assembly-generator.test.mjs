@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { performance } from "node:perf_hooks";
 import { generateAssembly } from "../src/lib/assembly-generator.ts";
 import { analyzeAssembly, checkGeneratedDocument, withinGenerationLimits } from "../src/lib/assembly-analysis.ts";
+import { analyzeAssemblySupport } from "../src/lib/assembly-support.ts";
 import {
   DEFAULT_INVENTORY, ORIENTATIONS, getPartDefinition, rotateVector, worldPorts,
   deriveConnections, inventoryUsage, makeEmptyDocument, validateDocument,
@@ -61,6 +62,7 @@ function assertSuccess(base, result, options) {
   assert.equal(usage.screw, analysis.connections);
   assert.deepEqual(result.document.inventory, base.inventory);
   assert.ok(withinGenerationLimits(analysis.bounds, options.limits));
+  if (options.allowFloating !== true) assert.deepEqual(analyzeAssemblySupport(result.document.parts), { supported: true, unsupportedPartIds: [] });
   assert.deepEqual(result.stats, {
     attempts: result.stats.attempts,
     usedParts: result.document.parts.length,
@@ -106,15 +108,16 @@ test("default search uses mixed fittings and substantially more stock than one b
 
 test("seeded generation is repeatable, varied, immutable, and can use the complete default stock", () => {
   const base = deepFreeze(makeEmptyDocument());
-  const options = deepFreeze({ ...defaults, seed: 3 });
+  const options = deepFreeze({ ...defaults, seed: 3, allowFloating: true });
   const before = JSON.stringify({ base, options });
   const first = generateAssembly(base, options);
   assertSuccess(base, first, options);
   assert.deepEqual(generateAssembly(base, options), first);
   assert.equal(JSON.stringify({ base, options }), before);
   assert.equal(first.stats.usedParts, 103);
-  const different = generateAssembly(base, { ...defaults, seed: 4 });
-  assertSuccess(base, different, { ...defaults, seed: 4 });
+  const differentOptions = { ...defaults, seed: 4, allowFloating: true };
+  const different = generateAssembly(base, differentOptions);
+  assertSuccess(base, different, differentOptions);
   const geometry = (result) => result.document.parts.map(({ id, ...part }) => part);
   assert.notDeepEqual(geometry(different), geometry(first));
 });
@@ -155,7 +158,7 @@ test("compact repair seeds close all six connector kinds in all 24 orientations 
   // The previous growth-first schedule missed 14 of these 144 ordinary cases at
   // the default 2000 attempts. A much smaller cap now exercises the guaranteed
   // compact completion seeds, while the later search can keep improving usage.
-  const options = { ...defaults, mode: "continue", maxAttempts: 64 };
+  const options = { ...defaults, mode: "continue", maxAttempts: 64, allowFloating: true };
   for (const kind of structural.slice(1)) for (let orientation = 0; orientation < 24; orientation++) {
     const original = orientedConnector("fixed", kind, [123.25, 834.125, -300.5], orientation);
     const base = withParts([original]);
@@ -190,6 +193,37 @@ test("continue a partly built cube preserves all existing identifiers, types, po
   const generated = assertSuccess(base, result, options);
   for (const original of base.parts) assert.deepEqual(generated.parts.find((part) => part.id === original.id), original);
   assert.equal(generated.parts.length, 20);
+});
+
+test("continue uses actual fixed connector bottoms near both floor-tolerance boundaries", () => {
+  for (const sign of [1, -1]) {
+    const parts = closedCube().parts.map((part) => ({ ...part,
+      positionMm: part.positionMm.map((value, axis) => value + (axis === 1 ? sign * 0.125 : 0)) }));
+    const anchorIndex = parts.findIndex((part) => part.id === "cube-c-010");
+    const anchor = parts.splice(anchorIndex, 1)[0];
+    anchor.positionMm[1] += sign * 0.5;
+    parts.unshift(anchor);
+    const complete = withParts(parts);
+    const base = deepFreeze(withParts(parts.filter((part) => part.id !== "cube-t-000-0")));
+    const snapshot = JSON.stringify(base);
+    const options = { ...defaults, mode: "continue", seed: 19, maxAttempts: 128,
+      limits: { widthMm: 468, heightMm: 468.5, depthMm: 468 } };
+    assert.equal(checkGeneratedDocument(base, complete, options), true);
+    const floatingOptions = { ...options, allowFloating: true };
+    const floating = generateAssembly(base, floatingOptions);
+    assertSuccess(base, floating, floatingOptions);
+    assert.equal(checkGeneratedDocument(base, floating.document, options), true,
+      "A real supported completion exists despite the first hub's nominal floor offset.");
+    for (const allowFloating of [undefined, false]) {
+      const strictOptions = { ...options, ...(allowFloating === undefined ? {} : { allowFloating }) };
+      const result = generateAssembly(base, strictOptions);
+      const generated = assertSuccess(base, result, strictOptions);
+      assert.equal(generated.parts.length, 20);
+      for (const original of base.parts) assert.deepEqual(generated.parts.find((part) => part.id === original.id), original);
+      assert.equal(result.stats.bounds.min[1], sign * 0.125);
+    }
+    assert.equal(JSON.stringify(base), snapshot);
+  }
 });
 
 test("both free ends of an existing tube acquire real connectors and a closed connected cycle", () => {
@@ -247,7 +281,8 @@ test("invalid documents/options and existing dimensions outside caps fail with n
   const base = makeEmptyDocument();
   for (const options of [null, {}, { ...defaults, mode: "other" }, { ...defaults, seed: NaN }, { ...defaults, seed: 0.5 },
     { ...defaults, limits: null }, { ...defaults, limits: { heightMm: 0 } }, { ...defaults, limits: { depthMm: Infinity } },
-    { ...defaults, limits: { widthMm: -1 } }, { ...defaults, maxAttempts: 1.5 }, { ...defaults, unexpected: true }]) {
+    { ...defaults, limits: { widthMm: -1 } }, { ...defaults, maxAttempts: 1.5 }, { ...defaults, unexpected: true },
+    ...[null, 0, 1, "false", "true", [], {}].map((allowFloating) => ({ ...defaults, allowFloating }))]) {
     assert.deepEqual(generateAssembly(base, options), { status: "no-solution", reason: "invalid-options", attempts: 0 });
   }
   for (const bad of [null, { ...base, version: 2 }, { ...base, inventory: { ...base.inventory, tube: -1 } },
@@ -273,4 +308,126 @@ test("attempt budget is clamped, completion stays bounded, and failure does not 
   assert.ok(performance.now() - started < 10000, "Small-stock search should terminate promptly even with a high requested cap.");
   const emptyContinue = { ...defaults, mode: "continue", maxAttempts: 200 };
   assertSuccess(base, generateAssembly(base, emptyContinue), emptyContinue);
+});
+
+test("omitted and false floating options produce the same useful supported multi-level assemblies across seeds", () => {
+  const base = deepFreeze(makeEmptyDocument());
+  for (const seed of [1, 3, 17, 42]) {
+    const options = deepFreeze({ ...defaults, seed });
+    const result = generateAssembly(base, options);
+    assertSuccess(base, result, options);
+    assert.deepEqual(generateAssembly(base, { ...options, allowFloating: false }), result);
+    assert.ok(result.stats.usedParts >= 80, `Seed ${seed} should use substantial stock while maintaining every vertical column.`);
+    assert.ok(result.stats.bounds.heightMm >= 468, "Supported upper levels must remain available.");
+    assert.equal(result.stats.bounds.min[1], 0);
+  }
+});
+
+test("a larger floating branch cannot hide a smaller supported result", () => {
+  const base = makeEmptyDocument();
+  const options = { ...defaults, seed: 3 };
+  const strict = generateAssembly(base, options);
+  const floatingOptions = { ...options, allowFloating: true };
+  const floating = generateAssembly(base, floatingOptions);
+  assertSuccess(base, strict, options);
+  assertSuccess(base, floating, floatingOptions);
+  assert.equal(analyzeAssemblySupport(floating.document.parts).supported, false);
+  assert.ok(floating.stats.usedParts > strict.stats.usedParts);
+});
+
+test("strict small-budget continuation adds real legs below an unsupported existing tube without moving it", () => {
+  const inventory = onlyInventory({ tube: 4, elbow: 4, screw: 8 });
+  const original = tube("elevated-existing-tube", [200, 434, 0], [1, 0, 0]);
+  const base = deepFreeze(withParts([original], inventory));
+  const snapshot = JSON.stringify(base);
+  assert.equal(analyzeAssemblySupport(base.parts).supported, false);
+  for (const seed of [1, 3, 42]) for (const allowFloating of [undefined, false]) {
+    const options = { ...defaults, mode: "continue", seed, maxAttempts: 64,
+      ...(allowFloating === undefined ? {} : { allowFloating }) };
+    const result = generateAssembly(base, options);
+    const generated = assertSuccess(base, result, options);
+    assert.deepEqual(generated.parts.find((part) => part.id === original.id), original);
+    assert.equal(result.stats.bounds.heightMm, 468);
+    assert.equal(result.stats.usedParts, 8);
+    assert.equal(generated.parts.filter((part) => part.partId === "tube" && worldPorts(part)[0].direction[1] !== 0).length, 2);
+  }
+  assert.equal(JSON.stringify(base), snapshot);
+});
+
+test("ground-anchored compact seeds repair 64 elevated downward and through fitting orientations", () => {
+  const options = { ...defaults, mode: "continue", maxAttempts: 64, allowFloating: false };
+  let checked = 0;
+  for (const kind of ["elbow", "tee", "corner3", "corner4", "cross"]) for (let orientation = 0; orientation < 24; orientation++) {
+    const original = orientedConnector("elevated-fixed", kind, [123.25, 834.125, -300.5], orientation);
+    if (!worldPorts(original).some((port) => port.direction[1] < 0)) continue;
+    const base = withParts([original]);
+    const result = generateAssembly(base, options);
+    assert.equal(result.status, "success", `${kind} downward orientation ${orientation}: ${JSON.stringify(result)}`);
+    const generated = assertSuccess(base, result, options);
+    assert.deepEqual(generated.parts.find((part) => part.id === original.id), original);
+    assert.ok(result.stats.bounds.min[1] <= 0.5);
+    assert.ok(result.stats.bounds.heightMm >= 868);
+    checked++;
+  }
+  assert.equal(checked, 64);
+});
+
+test("the same elevated fixture needs floating permission when caps or stock prevent vertical columns", () => {
+  for (const [hubHeight, limits] of [[434, { heightMm: 68 }], [834, {}]]) {
+    const original = tube("capped-floating-tube", [200, hubHeight, 0], [1, 0, 0]);
+    const base = deepFreeze(withParts([original], onlyInventory({ tube: 4, elbow: 4, screw: 8 })));
+    const snapshot = JSON.stringify(base);
+    const options = { ...defaults, mode: "continue", maxAttempts: 64, limits };
+    for (const allowFloating of [undefined, false]) {
+      const result = generateAssembly(base, { ...options, ...(allowFloating === undefined ? {} : { allowFloating }) });
+      assert.equal(result.status, "no-solution");
+      assert.equal(result.reason, "no-closed-solution");
+      assert.ok(!("document" in result));
+    }
+    const floatingOptions = { ...options, allowFloating: true };
+    const floating = generateAssembly(base, floatingOptions);
+    const generated = assertSuccess(base, floating, floatingOptions);
+    assert.equal(analyzeAssemblySupport(generated.parts).supported, false);
+    assert.deepEqual(generated.parts.find((part) => part.id === original.id), original);
+    assert.equal(checkGeneratedDocument(base, generated, options), false);
+    assert.equal(JSON.stringify(base), snapshot);
+  }
+});
+
+test("a closed floating baseline cannot be extended or silently replaced in strict continue mode", () => {
+  const inventory = onlyInventory({ tube: 4, elbow: 4, screw: 8 });
+  const original = tube("floating-baseline-tube", [200, 434, 0], [1, 0, 0]);
+  const options = { ...defaults, mode: "continue", limits: { heightMm: 68 }, maxAttempts: 64, allowFloating: true };
+  const initial = withParts([original], inventory);
+  const floating = generateAssembly(initial, options);
+  const base = deepFreeze(assertSuccess(initial, floating, options));
+  const snapshot = JSON.stringify(base);
+  for (const allowFloating of [undefined, false]) {
+    assert.deepEqual(generateAssembly(base, { ...defaults, mode: "continue", ...(allowFloating === undefined ? {} : { allowFloating }) }),
+      { status: "no-solution", reason: "no-closed-solution", attempts: 0 });
+  }
+  assert.deepEqual(generateAssembly(base, { ...defaults, mode: "continue", allowFloating: true }),
+    { status: "no-solution", reason: "already-closed", attempts: 0 });
+  assert.equal(JSON.stringify(base), snapshot);
+});
+
+test("floating permission preserves all hard stock, closure, collision and dimension constraints", () => {
+  const cases = [
+    [makeEmptyDocument(onlyInventory({ tube: 3, elbow: 4, screw: 8 })), {}],
+    [makeEmptyDocument(onlyInventory({ tube: 4, elbow: 4, screw: 7 })), {}],
+    [makeEmptyDocument(onlyInventory({ tube: 20, tee: 20, screw: 40 })), {}],
+    [makeEmptyDocument(), { widthMm: 467, heightMm: 67, depthMm: 467 }],
+  ];
+  for (const [base, limits] of cases) for (const allowFloating of [false, true]) {
+    const result = generateAssembly(base, { ...defaults, limits, allowFloating });
+    assert.equal(result.status, "no-solution");
+    assert.equal(result.reason, "no-closed-solution");
+    assert.ok(!("document" in result));
+  }
+  const colliding = { ...makeEmptyDocument(), parts: [
+    tube("collision-a", [200, 34, 0], [1, 0, 0]),
+    tube("collision-b", [200, 34, 0], [1, 0, 0]),
+  ] };
+  for (const allowFloating of [false, true]) assert.deepEqual(generateAssembly(colliding, { ...defaults, allowFloating }),
+    { status: "no-solution", reason: "invalid-document", attempts: 0 });
 });

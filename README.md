@@ -63,6 +63,8 @@ Generation looks for a single connected assembly using as many structural parts 
 
 The search is bounded and another run may find a different or larger result. Some inventory may remain unused. A completely closed existing shape cannot accept more connected parts while all existing pieces remain fixed; select **New assembly** for another variant. Search design and continuation limits: [docs/generator-design.md](docs/generator-design.md).
 
+**Allow unsupported sections** is unchecked by default. With it unchecked, every elevated connector must have its own continuous vertical chain of real tubes and connectors down to the ground. A horizontal beam does not support an intermediate connector, even when the beam has legs at its ends. Ground-contact connectors need no extra leg. Enabling the checkbox permits overhangs and unsupported sections while preserving every closure, inventory, collision and size rule. This is a geometric support filter, not a load-capacity or deflection calculation. It applies to generated results and leaves manual editing and existing saved plans unchanged.
+
 ## Language support
 
 Hungarian is the default UI language, regardless of the browser's language. The visible HU/EN switcher selects Hungarian or English, and the `playtive-locale` cookie preserves that choice for one year across the inspector and planner routes. UI text comes from typed, project-local dictionaries and a shared locale context in `src/i18n/`; no additional i18n library is required. Numbers and other locale-sensitive values use `Intl` with the selected locale.
@@ -115,6 +117,7 @@ src/components/planner/          # Planner interface and 3D editor
 tests/assembly-engine.test.mjs   # Domain regression tests
 tests/instance-id.test.mjs       # HTTP LAN part creation and saved-ID compatibility
 tests/assembly-generator.test.mjs # Closed assembly search and continuation
+tests/assembly-support.test.mjs   # Per-connector vertical ground support
 tests/i18n.test.mjs              # Locale and translation regression tests
 ```
 

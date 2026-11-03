@@ -333,6 +333,11 @@
 .planner-app .pl-generator-input input { width: 100%; min-width: 0; height: 44px; border: 0; padding: 0; background: transparent; font-size: 12px; color: #526c41; }
 .planner-app .pl-generator-input input::placeholder { color: #9ba88f; font-size: 10px; }
 .planner-app .pl-generator-input > span { color: #8e9f80; font-family: Consolas, monospace; font-size: 9px; }
+.planner-app .pl-generator-floating { margin-top: 18px; }
+.planner-app .pl-generator-floating label { display: flex; align-items: center; gap: 9px; min-height: 44px; width: fit-content; font-size: 11px; line-height: 1.5; font-weight: 600; color: #465f3b; cursor: pointer; }
+.planner-app .pl-generator-floating label:has(input:disabled) { opacity: .5; cursor: default; }
+.planner-app .pl-generator-floating input { width: 17px; height: 17px; margin: 0; flex-shrink: 0; accent-color: var(--pl-blue); }
+.planner-app .pl-generator-floating p { margin: 0 0 0 26px; color: #75876a; font-size: 10px; line-height: 1.7; }
 .planner-app .pl-generator-dialog form > p.pl-generator-note { display: flex; align-items: flex-start; gap: 7px; margin: 17px 0 0; font-size: 10px; line-height: 1.75; color: #7a8c6e; }
 .planner-app .pl-generator-note > svg { flex-shrink: 0; margin-top: 2px; }
 .planner-app .pl-generator-progress { display: flex; align-items: flex-start; gap: 10px; margin-top: 18px; padding: 14px; border: 1px solid #cddbee; border-radius: 6px; background: #eef3fa; color: #365f96; }

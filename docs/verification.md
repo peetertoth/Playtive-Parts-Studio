@@ -1,5 +1,17 @@
 # Verification
 
+## Optional unsupported sections — 2026-11-03
+
+- All 80 automated tests and the production build/TypeScript check passed. The generator suite includes 47 geometry, support, search and worker tests.
+- The new HU/EN checkbox defaults to unchecked and each worker request explicitly carries its boolean value. Missing and false values both require every elevated connector's own vertical chain of actual connections to ground. Horizontal members never transfer support, including a beam whose outer ends have legs but whose intermediate connectors do not.
+- Support fixtures cover grounded loops/cubes, an entirely elevated closed cube, a closed lateral overhang, unsupported intermediate beam connectors, stacked columns, rotated physical ground contact, fractional coordinates, connection tolerances, reordered parts and immutable inputs. An explicit true value bypasses only support; closure, connectivity, stock, screws, collisions, floor, caps and continuation preservation remain enforced.
+- Strict new-generation seeds produced useful supported upper levels and 85–98 structural pieces in representative default-budget runs. Omitted and false options produced identical deterministic results. Explicit true retained the original full-stock 103-piece seed.
+- Continuation checks added real legs without moving existing parts, including all tested feasible downward/through-fitting orientations and fractional Y=834.125 mm. Fixed actual connector bottoms are used by support and floor pruning. Positive and negative half-millimeter anchor-offset regressions both produced supported 20-piece completions and were independently rechecked against the final geometry audit, with no tolerance widening.
+- An actual worker-thread test verified strict failure for an elevated fixed fitting without a downward socket, successful closed generation when floating was explicitly allowed, retained poses and unchanged request data.
+- The actual-source UI harness passed 9 Studio scenario groups and 28 Dialog cases. All 23 recorded worker requests explicitly matched the checkbox (20 false, 3 true). It verified native label/hint/default/disabled behavior, state retention across modes/locales/reruns/cancellation, immutable in-flight option snapshots, strict result rejection, explicit floating opt-in and unchanged history/save/late-result protections. Existing locale and HTTP-crypto fallback checks passed.
+
+This is a conservative geometric support rule, not a material, gravity-force, strength or load-capacity simulation. Live browser rendering/device behavior remains unverified because browser access was unavailable; component checks used simulated native/React/worker surfaces.
+
 ## Closed assembly generation — 2026-11-03
 
 - All 59 automated tests passed: the original assembly/i18n/HTTP ID tests, 11 independent geometry audit tests, 13 search tests and 2 actual worker-thread protocol tests. The production build and its TypeScript check passed. Build output includes the compiled generator worker and Turbopack worker bootstrap.

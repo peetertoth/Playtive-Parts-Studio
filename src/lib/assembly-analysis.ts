@@ -2,6 +2,7 @@ import type { AssemblyAnalysis, AssemblyBounds, GenerationLimits, GenerationOpti
 import type { Vec3 } from "../domain/parts.ts";
 import type { PlannerDocument, PlacedPart, PortEnd } from "../domain/planner.ts";
 import { deriveConnections, getPartDefinition, rotateVector, validateDocument, worldPorts } from "./assembly-engine.ts";
+import { analyzeAssemblySupport } from "./assembly-support.ts";
 
 const LIMIT_TOLERANCE_MM = 1e-6;
 const endKey = (end: PortEnd): string => JSON.stringify([end.instanceId, end.portId]);
@@ -68,6 +69,7 @@ const samePosition = (a: Vec3, b: Vec3): boolean => a.every((value, axis) => val
 /** Independently audit a search result before it can replace the user's document. */
 export function checkGeneratedDocument(base: PlannerDocument, candidate: PlannerDocument, options: GenerationOptions): boolean {
   try {
+    if (options.allowFloating !== undefined && typeof options.allowFloating !== "boolean") return false;
     const original = validateDocument(base);
     const generated = validateDocument(candidate);
     if (Object.entries(original.inventory).some(([kind, count]) => generated.inventory[kind as keyof typeof original.inventory] !== count)) return false;
@@ -80,7 +82,8 @@ export function checkGeneratedDocument(base: PlannerDocument, candidate: Planner
       }
     } else if (options.mode !== "new") return false;
     const analysis = analyzeAssembly(generated.parts);
-    return analysis.connected && analysis.freePorts.length === 0 && withinGenerationLimits(analysis.bounds, options.limits);
+    return analysis.connected && analysis.freePorts.length === 0 && withinGenerationLimits(analysis.bounds, options.limits)
+      && (options.allowFloating === true || analyzeAssemblySupport(generated.parts).supported);
   } catch {
     return false;
   }

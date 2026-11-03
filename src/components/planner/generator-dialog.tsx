@@ -42,6 +42,7 @@ export function GeneratorDialog({ document, onClose, onApply }: GeneratorDialogP
   useLayoutEffect(() => { latest.current = { document, onApply }; }, [document, onApply]);
   const [mode, setMode] = useState<GenerationOptions["mode"]>(() => document.parts.length ? "continue" : "new");
   const [fields, setFields] = useState<LimitFields>({ widthMm: "", heightMm: "", depthMm: "" });
+  const [allowFloating, setAllowFloating] = useState(false);
   const [state, setState] = useState<DialogState>({ status: "idle" });
   const busy = state.status === "busy";
 
@@ -96,7 +97,7 @@ export function GeneratorDialog({ document, onClose, onApply }: GeneratorDialogP
       const randomSeed = crypto.getRandomValues(new Uint32Array(1))[0];
       const seed = randomSeed === lastSeed.current ? (randomSeed + 1) >>> 0 : randomSeed;
       lastSeed.current = seed;
-      const options: GenerationOptions = { mode, limits, seed };
+      const options: GenerationOptions = { mode, limits, seed, allowFloating };
       const running = new Worker(new URL("../../workers/assembly-generator.worker.ts", import.meta.url), { type: "module" });
       worker.current = running;
       setState({ status: "busy" });
@@ -165,6 +166,11 @@ export function GeneratorDialog({ document, onClose, onApply }: GeneratorDialogP
         <div>{LIMIT_FIELDS.map(({ key, label }) => <label key={key} htmlFor={`generator-${key}`}><span>{t[label]}</span><span className="pl-generator-input"><input id={`generator-${key}`} type="number" inputMode="decimal" min={0} step="any" aria-invalid={state.status === "error" && state.kind === "invalidLimits" || undefined} aria-describedby="generator-limits-hint" placeholder={t.uncapped} value={fields[key]}
           onChange={(event) => { setFields((current) => ({ ...current, [key]: event.target.value })); if (state.status === "error" && state.kind === "invalidLimits") setState({ status: "idle" }); }} /><span>mm</span></span></label>)}</div>
       </fieldset>
+      <div className="pl-generator-floating">
+        <label htmlFor="generator-allow-floating"><input id="generator-allow-floating" type="checkbox" checked={allowFloating} disabled={busy} aria-describedby="generator-floating-hint"
+          onChange={(event) => setAllowFloating(event.target.checked)} /><span>{t.allowFloating}</span></label>
+        <p id="generator-floating-hint">{t.allowFloatingHint}</p>
+      </div>
       <p className="pl-generator-note"><Info size={15} /><span>{t.searchNote}</span></p>
       {busy && <div className="pl-generator-progress" role="status" aria-live="polite"><LoaderCircle size={20} className="spinner" /><div><strong>{t.busy}</strong><p>{t.busyHint}</p></div></div>}
       {state.status === "error" && <div className="pl-form-error" role="alert"><Info size={16} /><span>{t[state.kind]}</span></div>}

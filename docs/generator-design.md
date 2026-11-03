@@ -12,8 +12,19 @@ A generated result is accepted only when all of these conditions hold:
 - The existing assembly engine accepts all positions, exact quarter-turn orientations, collisions, floor clearance, IDs and schema fields.
 - Each supplied maximum outer dimension is respected: width is X, height is Y, depth is Z. Limits include the physical connector bodies and are measured in millimeters. Each cap is independently optional.
 - Inventory is preserved exactly. In continue mode every existing part retains its ID, type, position and orientation.
+- Unless `allowFloating` is explicitly `true`, every elevated connector has its own continuous vertical column of real connections to the ground. Missing and `false` values select this stricter default. Horizontal members never transfer support to connectors.
 
 `src/lib/assembly-analysis.ts` performs an independent final audit using the actual engine's connections and catalog body bounds. The worker and the UI integration both gate successful results through that audit. Manual editing continues to support unfinished assemblies; generation commits only completed assemblies.
+
+## Vertical support option
+
+`src/lib/assembly-support.ts` seeds support only at connectors whose rotated physical bottom contacts the actual ground at Y=0, using the engine's 0.5 mm tolerance. It propagates upward through connected vertical tubes and connectors, including multiple stacked levels. A horizontal tube requires supported connectors at both ends. Every elevated intermediate connector needs its own column; a long beam with legs at its two outer ends is insufficient. Support never propagates sideways through a horizontal beam or around a loop, and an elevated connected assembly cannot treat its own lowest layer as ground.
+
+The search keeps unsupported intermediate graph states available so later steps can add legs. It scores supported growth, includes ground-anchored continuation seeds and accepts only support-compliant final output in strict mode. A larger unsupported result cannot hide a smaller supported candidate. Existing parts remain fixed; impossible support repairs return no solution without changing the plan. The search remains bounded, including five-way connector repairs.
+
+The UI checkbox is initially unchecked, is disabled during a run and is sent explicitly with each worker request. `allowFloating: true` bypasses only this support test. Fully closed endpoints, connectivity, geometry, stock, screws, dimensions and immutable continuation still apply in both modes. The flag belongs to generation options, not the saved-plan schema.
+
+This conservative rule is a geometric filter. It does not model gravity forces, material stiffness, bending, buckling, anchoring, load capacity or structural stability, and it does not certify a physical construction.
 
 ## Search
 

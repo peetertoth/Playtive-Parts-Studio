@@ -127,7 +127,57 @@ test("limits include connector bodies rather than the hub grid or tube endpoints
   assert.equal(checkGeneratedDocument(base, document, options("new", { heightMm: 50 })), false);
   assert.equal(checkGeneratedDocument(base, document, options("new", { widthMm: 468, heightMm: 68, depthMm: 468 })), true);
   const moved = shifted(document, [1730, 400, -290]);
-  assert.equal(checkGeneratedDocument(base, moved, options("new", { widthMm: 468, heightMm: 68, depthMm: 468 })), true);
+  assert.equal(checkGeneratedDocument(base, moved, {
+    ...options("new", { widthMm: 468, heightMm: 68, depthMm: 468 }), allowFloating: true,
+  }), true);
+});
+
+test("support is required when allowFloating is omitted or false, and true permits an elevated closed cube", () => {
+  for (const document of [square(), validateDocument(cube)]) {
+    const base = makeEmptyDocument(document.inventory);
+    for (const allowFloating of [undefined, false, true]) {
+      assert.equal(checkGeneratedDocument(base, document, { ...options(), allowFloating }), true);
+    }
+    const floating = shifted(document, [0.125, 400, -0.375]);
+    assert.equal(analyzeAssembly(floating.parts).connected, true);
+    assert.equal(analyzeAssembly(floating.parts).freePorts.length, 0);
+    assert.equal(checkGeneratedDocument(base, floating, options()), false);
+    assert.equal(checkGeneratedDocument(base, floating, { ...options(), allowFloating: false }), false);
+    assert.equal(checkGeneratedDocument(base, floating, { ...options(), allowFloating: true }), true);
+    assert.equal(checkGeneratedDocument(floating, floating, { ...options("continue"), allowFloating: true }), true);
+    assert.equal(checkGeneratedDocument(floating, floating, options("continue")), false);
+  }
+});
+
+test("the result guard rejects nonboolean allowFloating values even for a grounded candidate", () => {
+  const document = square();
+  for (const allowFloating of [null, 0, 1, "true", "false", [], {}]) {
+    assert.equal(checkGeneratedDocument(makeEmptyDocument(), document, { ...options(), allowFloating }), false);
+  }
+});
+
+test("allowFloating true retains closure, connectivity, floor, collision, stock, limits and preservation audits", () => {
+  const complete = square();
+  const base = makeEmptyDocument();
+  const floatingOptions = { ...options(), allowFloating: true };
+  const open = { ...complete, parts: complete.parts.slice(0, -1) };
+  const disconnected = validateDocument({ ...complete, inventory: { ...complete.inventory, elbow: 8 },
+    parts: [...complete.parts, ...shifted(complete, [1000, 0, 0], "other-").parts],
+  });
+  const collision = { ...complete, parts: [...complete.parts, { ...complete.parts[4],
+    id: "collision", orientation: complete.parts[5].orientation,
+  }] };
+  const insufficient = { ...complete, inventory: { ...complete.inventory, screw: 7 } };
+  for (const candidate of [open, shifted(complete, [0, -1, 0]), collision, { ...complete, version: 2 }]) {
+    assert.equal(checkGeneratedDocument(base, candidate, floatingOptions), false);
+  }
+  assert.equal(analyzeAssembly(disconnected.parts).freePorts.length, 0);
+  assert.equal(checkGeneratedDocument(makeEmptyDocument(disconnected.inventory), disconnected, floatingOptions), false);
+  assert.equal(checkGeneratedDocument(makeEmptyDocument(insufficient.inventory), insufficient, floatingOptions), false);
+  assert.equal(checkGeneratedDocument(base, complete, { ...floatingOptions, limits: { widthMm: 467 } }), false);
+  assert.equal(checkGeneratedDocument(complete, shifted(complete, [0, 400, 0]), {
+    ...floatingOptions, mode: "continue",
+  }), false);
 });
 
 test("optional caps act independently with inclusive thresholds and a 1e-6 mm tolerance", () => {

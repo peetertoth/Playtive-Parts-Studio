@@ -7,6 +7,8 @@ export interface GenerationOptions {
   mode: "new" | "continue";
   limits: GenerationLimits;
   seed: number;
+  /** Permit geometric overhangs/unsupported members; omitted means false. */
+  allowFloating?: boolean;
   /** Bounded search effort; default 2000, clamped to 1..20000. */
   maxAttempts?: number;
 }
@@ -24,6 +26,11 @@ export interface AssemblyAnalysis {
   connections: number;
   tubes: number;
   connectors: number;
+}
+/** Conservative per-connector vertical load-path check, not a structural simulation. */
+export interface AssemblySupportAnalysis {
+  supported: boolean;
+  unsupportedPartIds: string[];
 }
 export type GenerationFailure = "invalid-options" | "invalid-document" | "outside-limits" | "no-closed-solution" | "already-closed";
 export interface GenerationStats {
